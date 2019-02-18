@@ -16,10 +16,10 @@
   <VAR id="IPS_DATACONTROL" value="$script_input_string0$"/>
 
   <!-- output parameters shortcuts -->
-  <VAR id="OP_DATACONTROL" value="custom_out_param0"/>
-  <VAR id="OP_DATA_START" value="1"/>
-  <VAR id="OP_DATA_END" value="16"/>
+  <VAR id="OP_DATA_START" value="0"/>
+  <VAR id="OP_DATA_END" value="15"/>
   <VAR id="OP_DATA_LEN" formula="$OP_DATA_END$-$OP_DATA_START$+1"/>
+  <VAR id="OP_DATACONTROL" value="custom_out_param16"/>
   <VAR id="OP_TRANSFER_SPEED" value="custom_out_param17"/>
 
   <EXPOSED_OBJECTS object_ids="" />

@@ -7,7 +7,7 @@ data to user interface (KUIML), for example for showing complex curves or bargra
 we have to cut big arrays of data into smaller pieces.
 
 In this script data is sent in chunks of 16 values in each.
-First 17 output params is used for that purpose (first param is for data control).
+First 17 output params is used for that purpose (one param is for data control).
 KUIML received this chunk of data and saves it in it's own array and replies using
 inputStrings, so we know that chunk of data was received. Then we send next chunk.
 
@@ -60,22 +60,22 @@ array<string> inputStringsNames={"IN Data Control"};
 // the other 15 output parameters are free to use
 
 array<string> outputParametersNames={
-	"DControl","D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16", 
+	"D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16", "DControl",
 	"Transfer speed",};
 array<string> outputParametersFormats={".0",".0",".0",".0",".0",".0",".0",".0",".0",".0",".0",".0",".0",".0",".0",".0",".0",
 	".0"};
-array<double> outputParametersMin={0,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,
+array<double> outputParametersMin={MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,MIN_VALUE,0,
 	0};
-array<double> outputParametersMax={OUT_DATA_SIZE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,
+array<double> outputParametersMax={MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,MAX_VALUE,OUT_DATA_SIZE,
 	100000};
 array<string> outputParametersUnits={"","","","","","","","","","","","","","","","","",
 	"values/s"};
 array<double> outputParameters(outputParametersNames.length);
 
 // names of output parameters (for easy access)
-const int OP_DATACONTROL = 0;
-const int OP_DATA_START = 1;
-const int OP_DATA_END = 16;
+const int OP_DATA_START = 0;
+const int OP_DATA_END = 15;
+const int OP_DATACONTROL = 16;
 const int OP_DATA_LEN = OP_DATA_END-OP_DATA_START+1;
 const int OP_TRANSFER_SPEED = 17;
 

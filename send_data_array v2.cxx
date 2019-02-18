@@ -7,7 +7,7 @@ data to user interface (KUIML), for example for showing complex curves or bargra
 we have to cut big arrays of data into smaller pieces.
 
 In this script data is sent in chunks of 16 values in each.
-First 17 output params is used for that purpose (first param is for data control).
+First 17 output params is used for that purpose (one param is for data control).
 KUIML received this chunk of data and saves it in it's own array and replies using
 inputStrings, so we know that chunk of data was received. Then we send next chunk.
 
@@ -76,48 +76,50 @@ array<string> inputStringsNames={"IN Data Control"};
 const double P_MIN = (ENABLE_DATA_PACKING) ? 0 : MIN_VALUE;
 const double P_MAX = (ENABLE_DATA_PACKING) ? pow(2,26) : MAX_VALUE;
 
-
 array<string> outputParametersNames={
-	"DControl","D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16", 
+	"D1","D2","D3","D4","D5","D6","D7","D8","D9","D10","D11","D12","D13","D14","D15","D16", "DControl",
 	"Transfer speed",};
-array<string> outputParametersFormats={".5",".2",".2",".2",".2",".2",".2",".2",".2",".2",".2",".2",".2",".2",".2",".2",".2",
+array<string> outputParametersFormats={".2",".2",".2",".2",".2",".2",".2",".2",".2",".2",".2",".2",".2",".2",".2",".2",".5",
 	".0"};
-array<double> outputParametersMin={0,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,
+array<double> outputParametersMin={P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,P_MIN,0,
     -1};
-array<double> outputParametersMax={OUT_DATA_SIZE,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,
+array<double> outputParametersMax={P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,P_MAX,pow(2,26),
     100000};
 array<string> outputParametersUnits={"","","","","","","","","","","","","","","","","",
 	"values/s"};
 array<double> outputParameters(outputParametersNames.length);
 
 // names of output parameters (for easy access)
-const int OP_DATACONTROL = 0;
-const int OP_DATA_START = 1;
-const int OP_DATA_END = 16;
-const int OP_DATA_LEN = OP_DATA_END-OP_DATA_START+1;
-const int OP_TRANSFER_SPEED = 17;
 
-// output data (array of values to send to KUIML)
-array<double> outData(OUT_DATA_SIZE);
-int outdata_cur_start_index = 0; // current start index of data to send
+const int OP_DATA_START = 0;
+const int OP_DATA_END = 15;
+const int OP_DATA_LEN = OP_DATA_END-OP_DATA_START+1;
+const int OP_DATACONTROL = 16;
+const int OP_TRANSFER_SPEED = 17;
 
 // other script vars
 bool mute_output = false;
 int values_sent = 0, samples_counter = 0;
 
-
+// process sample functions
 void processSample(array<double>& ioSample) {
     
     // counting samples
     samples_counter++;
+    update_data_control_in_smp--;
 
     // if one second has passed
     if (samples_counter >= sampleRate) {
         // showing how many data was sent
-        print("TRANSFER SPEED: " + values_sent + " value/s, " + round((values_sent+0.0)/OUT_DATA_SIZE,2) + " arrays/s, " + round((values_sent/(ENABLE_DATA_PACKING ? 3 : 1))/OP_DATA_LEN,2) + " transaction/s");
+        // print("TRANSFER SPEED: " + values_sent + " value/s, " + round((values_sent+0.0)/OUT_DATA_SIZE,2) + " arrays/s, " + round((values_sent/(ENABLE_DATA_PACKING ? 3 : 1))/OP_DATA_LEN,2) + " transaction/s");
         outputParameters[OP_TRANSFER_SPEED] = values_sent;
         values_sent = 0;
         samples_counter = 0;
+    }
+
+    // if we need to update data_control value
+    if (update_data_control_in_smp == 0){
+        outputParameters[OP_DATACONTROL] = data_control;
     }
 
 	// mute output if needed
@@ -128,10 +130,7 @@ void processSample(array<double>& ioSample) {
 	}
 }
 
-int data_control_from_kuiml = 0;
-int old_data_control_from_kuiml = -1;
-int no_data_control_changes = 0;
-
+// receiving input parameter changes
 void updateInputParameters() {
     data_control_from_kuiml = parseInt(inputStrings[0]);
     // print("kuiml in: " + data_control_from_kuiml);
@@ -139,11 +138,23 @@ void updateInputParameters() {
     // sendOutDataScheduler();
 }
 
-
+// sending output data (on each buffer)
 void computeOutputData() {
     // sending output data
     sendOutDataScheduler();
 }
+
+
+//////////////////////////////
+// SENDING DATA TO KUIML FUNCTIONS
+//////////////////////////////
+
+// output data (array of values to send to KUIML)
+array<double> outData(OUT_DATA_SIZE);
+int outdata_cur_start_index = 0; // current start index of data to send
+int data_control_from_kuiml = 0; // used in updateInputParameters
+int update_data_control_in_smp = 0; // after which number of samples to update (to let other data be received)
+double data_control = 0;
 
 // function is a scheduler
 // sending 'outData' array in pieces via sendDataChunk function
@@ -197,8 +208,11 @@ double pack3(double a, double b, double c){
     int intc = int( (c+pack_range)*pack_coeff +.5);
     // print("a: " + inta + " b " + intb + " c: " + intc + " packed: " + packed);
     if (inta > pack_bitmask) inta = pack_bitmask; // limit max_value
+    if (inta < 0) inta = 0; // limit min_value
     if (intb > pack_bitmask) intb = pack_bitmask;
+    if (intb < 0) intb = 0; // limit min_value
     if (intc > pack_bitmask) intc = pack_bitmask;
+    if (intc < 0) intc = 0; // limit min_value
     packed = ((inta & pack_bitmask) << pack_bitsperval*2) + ((intb & pack_bitmask) << pack_bitsperval) + (intc & pack_bitmask);
     // print("a: " + inta + " b " + intb + " c: " + intc + " packed: " + packed);
     return packed/100.0;
@@ -231,8 +245,14 @@ void sendDataChunk(array<double>& data, int start_index){
         out_index++;
         values_sent+=i_inc;
     }
-    outputParameters[OP_DATACONTROL] = start_index+data_control_tiny_offset;
-    
+
+    data_control = start_index+data_control_tiny_offset;
+
+    // we can send data_control value later (more stability, but slower)
+    // or update outputParameters immediately (less stability)
+    update_data_control_in_smp = 10;
+    // outputParameters[OP_DATACONTROL] = data_control;
+
      // data offset is needed for KUIMN
     data_control_tiny_offset += 0.0001;
     if (data_control_tiny_offset > 0.01) data_control_tiny_offset = 0;
