@@ -1,0 +1,278 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<SKIN layout_type="column" h_margin="8" v_margin="2">
+
+  <DEFINE><VAR base_type="VARIABLE" override="true" /></DEFINE>
+
+   <!-- Definitions -->
+  <VAR id="N_BARS" value="96"/> <!-- set it the same as in .cxx file -->
+  <VAR id="N_TAPS" value="96*2" /> <!-- FFT values -->
+  <VAR id="N_TAPS_HALF" formula="$N_TAPS$/2" />
+  <VAR id="UPDATE_ALL_BARS_AT_ONCE" value="true"/> <!-- set to false if you want to update bars immediatle after receiving new chunk of data -->
+  
+  <VAR id="ENABLE_DATA_PACKING" value="true" /> <!-- true or false, set the same as in CXX -->
+  <VAR id="MIN_VALUE" value="-102.3"/> <!-- set the same in CXX -->
+  <VAR id="MAX_VALUE" value="0"/> <!-- set the same in CXX -->
+
+  <!-- input parameters shortcuts -->
+  <VAR id="IP_USE_WINDOW" value="custom_param0"/>
+  <VAR id="IPS_DATACONTROL" value="$script_input_string0$"/>
+
+  <!-- output parameters shortcuts -->
+  <VAR id="OP_DATA_START" value="0"/>
+  <VAR id="OP_DATA_END" value="15"/>
+  <VAR id="OP_DATA_LEN" formula="$OP_DATA_END$-$OP_DATA_START$+1"/>
+  <VAR id="OP_DATACONTROL" value="custom_out_param16"/>
+  <VAR id="OP_SAMPLERATE" value="custom_out_param17"/>
+  <VAR id="OP_DOMI_FREQ" value="custom_out_param18"/>
+  <VAR id="OP_DOMI_FREQ_LEVEL" value="custom_out_param19"/>
+
+  <EXPOSED_OBJECTS object_ids="" />
+
+  <!-- scripts -->
+  <SCRIPT requires="$OP_SAMPLERATE$;$OP_DATACONTROL$;$IPS_DATACONTROL$;string_a;selected_band;sel_band_gain;sel_band_freq;sel_band_info.*" script="
+  array&lt;Kt::Param@> opdata($OP_DATA_LEN$); /* array access to outputParams */
+  array&lt;Kt::Param@> bars($N_BARS$); /* used for displaying level values */
+  array&lt;double> bars_cache($N_BARS$); /* used for caching data */
+
+  bool data_packing_enabled = ($ENABLE_DATA_PACKING$ == true);
+  bool update_all_bars_at_once = ($UPDATE_ALL_BARS_AT_ONCE$ == true);
+
+  void onLoad(){
+    receiveDataChunk();
+    selected_band = int($N_BARS$/2);
+    selectBandChange();
+  }
+
+  /* print function (for debugging) */
+  string s = &quot;&quot;;
+  void prints(string text){
+  	string_a = &quot;&quot; + text;
+  }
+
+  /* selecting band on click */
+  void selectBandOnClick(double i){
+    double freq, level;
+  	if (i>-1) {
+  		selected_band = i;
+  	}
+  }
+
+  /* calculating band frequency */
+  double calcBandFreq(int band){
+    return band*(($OP_SAMPLERATE$/2)/$N_TAPS_HALF$);
+  }
+
+  /* selected band change */
+  int cur_sel_band = 0;
+  void selectBandChange(){
+    /* showing selected band level */
+    int x = int(selected_band + .5);
+    if (selected_band &lt; 0) x = -1;
+    if (((x>=0)) and (x &lt; $N_BARS$)) {
+      cur_sel_band = x;
+      sel_band_gain = bars[cur_sel_band];
+      sel_band_freq = calcBandFreq(cur_sel_band);
+      sel_band_info.display = true;
+    } else {
+      cur_sel_band = 0;
+      sel_band_info.display = false;
+    }
+    /* prints(s+x); */
+  }
+
+  /* receives and parsed data sent via outputParams */
+  /* called, when new chunk of data is received */
+  void receiveDataChunk(){
+    int data_control = int($OP_DATACONTROL$);
+    int lev_ind_start = data_control &amp; 255;
+    int data_checksum_sent = data_control >> 16;
+    int data_checksum = 0;
+    bool last_checksum_failed = false;
+
+    /* prints(s+lev_ind_start); */
+
+    if (lev_ind_start &lt; 0) lev_ind_start = 0;
+
+    /* if it's a new cycle, update all bars at once */
+    if ((lev_ind_start == 0) and update_all_bars_at_once and !last_checksum_failed) {
+      updateAllBars();
+    }
+
+    /* parse incoming chunk of data */
+    
+    int lev_ind = lev_ind_start;
+
+    for (int i=0;i&lt;$OP_DATA_LEN$;i++){
+      data_checksum = data_checksum ^ int(opdata[i]);
+      if (data_packing_enabled) {
+        if (lev_ind >= $N_BARS$) break;
+        /* data unpacking */
+        unpack3(opdata[i]); /* we get vals in u1, u2, u3 */
+        if (update_all_bars_at_once) {
+          /* put received data to cache */
+          bars_cache[lev_ind] = u1;
+          if (lev_ind >= $N_BARS$-1) break;
+          bars_cache[lev_ind+1] = u2;
+          if (lev_ind >= $N_BARS$-2) break;
+          bars_cache[lev_ind+2] = u3;
+        } else {
+          bars[lev_ind] = u1;
+          if (lev_ind >= $N_BARS$-1) break;
+          bars[lev_ind+1] = u2;
+          if (lev_ind >= $N_BARS$-2) break;
+          bars[lev_ind+2] = u3;
+        }
+        lev_ind+=3;
+
+      } else {
+        if (lev_ind >= $N_BARS$) break;
+        /* no data packing */
+        if (update_all_bars_at_once) {
+          bars_cache[lev_ind] = opdata[i]; /* put received data to cache */
+        } else {
+          bars[lev_ind] = opdata[i];
+        }
+        lev_ind++;
+      }
+    }
+
+    /* checking checksum */
+    data_checksum  = data_checksum &amp; 255;
+    /* prints(s+data_checksum_sent+&quot; &quot;+data_checksum); */
+
+    if (data_checksum_sent == data_checksum) {
+      /* if checksums match, send back to CXX, that we've received OK */
+      $IPS_DATACONTROL$ = &quot;&quot; + lev_ind_start; 
+      last_checksum_failed = false;
+    } else {
+      last_checksum_failed = true;
+    }
+  }
+
+  /* showing the whole received bars data */
+  void updateAllBars(){
+    for (int i=0;i&lt;$N_BARS$;i++){
+      bars[i] = bars_cache[i];
+    }
+    /* showing level of current selected band */
+    sel_band_gain = bars[cur_sel_band];
+  }
+
+  /* unpacking data functions */
+  const int pack_bitsperval = 10;
+  const int pack_bitmask = int(pow(2,pack_bitsperval))-1;
+  const double pack_range = ($MAX_VALUE$ - $MIN_VALUE$);
+  const double pack_coeff = pack_bitmask/pack_range;
+  double u1, u2, u3; /* vars for unpacked data */
+  void unpack3(double packeddbl){
+    int64 packed = int(packeddbl*100.0 + .5);
+    u1 = ((packed >> pack_bitsperval*2) &amp; pack_bitmask) / pack_coeff - pack_range;
+    u2 = ((packed >> pack_bitsperval) &amp; pack_bitmask) / pack_coeff - pack_range;
+    u3 = (packed &amp; pack_bitmask) / pack_coeff - pack_range;
+  }
+
+  /* helper functions */
+  double round(double d, double p = 2) {
+      double x = pow(10, p);
+      double r = floor(d*x+0.5)/x ;
+      return r;
+  }
+  "/>
+
+  <!-- connect opdata array to outputParams (custom_out_param...) -->
+  <!-- so that we can access that data as array of params in script -->
+  <VAR id="i" value="0" />
+  <REPEAT count="$OP_DATA_LEN$" start="$OP_DATA_START$">
+    <ACTION_TRIGGER event_id="window.loaded.value_changed" condition_formula="window.loaded==1" script="@opdata[$i$]=custom_out_param$index$" requires="custom_out_param$index$"/>
+    <VAR id="i" formula="$i$+1" />
+  </REPEAT>
+
+  <!-- create enough params to hold levels and connect them to script array -->
+  <REPEAT count="$N_BARS$">
+    <PARAM id="level$index$" min="$MIN_VALUE$" max="$MAX_VALUE$" default="0" />
+    <ACTION_TRIGGER event_id="window.loaded.value_changed" condition_formula="window.loaded==1" script="@bars[$index$]=level$index$" requires="level$index$"/>
+  </REPEAT>
+
+
+  <ROW text_color="#CCCCCC" spacing="20">
+    <PARAM_TEXT param_id="$OP_SAMPLERATE$" content="SampleRate: {value} " value_format=".0" />
+    <TEXT value="Number of bars: $N_BARS$" value_format=".0" />
+
+    <!-- dominant freq info -->
+    <PARAM_TEXT param_id="$OP_DOMI_FREQ$" content="Dominant freq: {value} Hz" value_format=".0"  width="120" text_h_align="left" />
+    <PARAM_TEXT param_id="$OP_DOMI_FREQ_LEVEL$" content="Level: {value} dB" value_format=".2"  width="80" text_h_align="left" />
+
+
+    <ROW spacing="0">
+      <CUS_CHECK_BOX param_id="$IP_USE_WINDOW$" />
+      <TEXT value="Blackman window" id="text_use_window">
+        <INVISIBLE_PARAM_BUTTON param_id="$IP_USE_WINDOW$" width="100%" height="100%" positions_count="2" cursor="system::hand">
+          <TOOLTIP text="Enable Blackman window" />
+        </INVISIBLE_PARAM_BUTTON>
+      </TEXT>
+    </ROW>
+  </ROW>
+
+  <!-- output bars -->
+  <ROW spacing="1" v_margin="5">
+  	<PARAM id="selected_band" min="-1" max="$N_BARS$" default="-1" exposed="true" type="double" />
+  	<PARAM id="band_click" min="-1" max="$N_BARS$" default="-1" exposed="true" />
+    <REPEAT count="$N_BARS$">
+      <COLUMN>
+      <!--
+      <PARAM_TEXT id="pt$index$" param_id="level$index$" font_escapement="90" font_size="10" text_color="#AAAAAA" height="45" width="15" text_h_align="left" text_v_align="center" content="{value}" value_format=".1" v_offset="-7" exposed="true" />
+      <PARAM_LINK id="pl$index$" from="level$index$" to="pt$index$.opacity" formula="1.3-(-x/60)" /> 
+      -->
+      <LAYER_STACK>
+	      <CUS_VMETER height="120" id="cuzmeter$index$" param_id="level$index$" margin_before="0" margin_after="0" opacity="0.5" exposed="true" />
+	      <PARAM id="selband$index$" min="-1" max="$index$" default="-1" />
+	      <PARAM_LINK id="link_selband_$index" from="selband$index$" to="band_click" />
+	      <INVISIBLE_PARAM_TOGGLE_SWITCH param_id="selband$index$" width="100%" height="100%" cursor="system::hand" />
+  	  </LAYER_STACK>
+
+        <PARAM_LINK id="link_selbandop_$index" from="selected_band" to="cuzmeter$index$.opacity" formula="1.6 - ((x+0.1)> $index$) * ((x-0.1)&lt; $index$)" />
+        </COLUMN>
+    </REPEAT>
+  </ROW>
+
+  <!-- FREQ INFO -->
+  <ROW h_align="center">
+    <!-- selected band info -->
+    <VAR id="NBARS_PLUS_1" formula="$N_BARS$+2" />
+    <CUS_MINI_BLUE_KNOB param_id="selected_band" positions_count="$NBARS_PLUS_1$" />
+    <LAYER_STACK width="200" internal_h_align="left">
+
+      <ROW id="sel_band_info" h_align="left">
+        <PARAM_TEXT param_id="selected_band" content="Band: {value} " value_format=".0"/>
+        <PARAM id="sel_band_freq" default="0" min="0" max="96000" value_format=".1" />
+        <PARAM_TEXT param_id="sel_band_freq" text_color="#ffffff" display="true" text_h_align="left" content="Freq: {value} Hz" value_format=".1" />
+
+        <PARAM id="sel_band_gain" default="$MIN_VALUE$" min="$MIN_VALUE$" max="$MAX_VALUE$" value_format=".1" />
+        <PARAM_TEXT param_id="sel_band_gain" text_color="#ffffff" display="true" text_h_align="left" content="Level: {value} dB" value_format=".1" />
+      </ROW>
+    </LAYER_STACK>
+
+  </ROW>
+      
+
+  <!-- PRINT AREA -->
+
+  <ROW width="100%">
+  	<STRING id="string_a" default=" " />
+    <TEXT_FIELD string_id="string_a" text_color="#ffffff" width="100%" display="true" text_h_align="left" />
+  </ROW>
+
+  <!-- ACTIONS -->
+  
+  <!-- window onload -->
+  <ACTION_TRIGGER event_id="window.loaded.value_changed" script="onLoad();" async="false" />
+
+  <!-- receive data on control change -->
+  <ACTION_TRIGGER event_id="$OP_DATACONTROL$.value_changed" script="receiveDataChunk();" async="true" />
+
+  <!-- selected band change -->
+  <ACTION_TRIGGER event_id="band_click.value_changed" script="selectBandOnClick(band_click);" condition_formula="window.loaded==1" async="true" />
+  <!-- receive data on control change -->
+  <ACTION_TRIGGER event_id="selected_band.value_changed" script="selectBandChange();"  async="true" />
+
+</SKIN>

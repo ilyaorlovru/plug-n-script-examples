@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<SKIN layout_type="column" h_margin="8" v_margin="2">
+
+  <DEFINE><VAR base_type="VARIABLE" override="true" /></DEFINE>
+
+  <!-- Definitions -->
+  <VAR id="NUM_OF_BARS" value="31"/> <!-- 31 max, set it the same as in .cxx file -->
+
+  <!-- input parameters shortcuts -->
+  <VAR id="IP_USE_WINDOW" value="custom_param0"/>
+
+  <!-- output parameters shortcuts -->
+  <VAR id="OP_SAMPLERATE" value="custom_out_param31"/>
+
+  <!-- other vars -->
+  <VAR id="POSCOUNT_FOR_RULER" formula="($NUM_OF_BARS$+1)"/>
+
+  <EXPOSED_OBJECTS object_ids="*" />
+
+  <!-- scripts -->
+  <SCRIPT requires="" script="
+  void onLoad(){
+    ruler_param.max = $OP_SAMPLERATE$ / 2;
+  }
+  "/>
+
+  <!-- top info row -->
+  <ROW text_color="#CCCCCC" spacing="20">
+    <PARAM_TEXT param_id="$OP_SAMPLERATE$" content="SampleRate: {value} " value_format=".0" />
+    <TEXT value="Number of bars: $NUM_OF_BARS$" value_format=".0" />
+
+    <ROW spacing="0">
+      <CUS_CHECK_BOX param_id="$IP_USE_WINDOW$" />
+      <TEXT value="Use Blackman window" id="text_use_window">
+        <INVISIBLE_PARAM_BUTTON param_id="$IP_USE_WINDOW$" width="100%" height="100%" positions_count="2" cursor="system::hand">
+          <TOOLTIP text="Enable Blackman window" />
+        </INVISIBLE_PARAM_BUTTON>
+      </TEXT>
+    </ROW>
+  </ROW>
+  
+  <CELL>
+    <!-- showing level bars -->
+    <ROW spacing="1">
+      <REPEAT count="$NUM_OF_BARS$" start="0">
+        <COLUMN>
+        <PARAM_TEXT id="pt$index$" param_id="custom_out_param$index$" font_escapement="90" font_size="10" text_color="#AAAAAA" height="45" width="15" text_h_align="left" text_v_align="center" content="{value}" value_format=".1" v_offset="-7" exposed="true" />
+        <PARAM_LINK id="pl$index$" from="custom_out_param$index$" to="pt$index$.opacity" formula="1.3-(-x/60)" />
+        <CUS_VMETER height="100" param_id="custom_out_param$index$" />
+        </COLUMN>
+      </REPEAT>
+    </ROW>
+
+    <!-- showing list of frequencies -->
+    <PARAM id="ruler_param" min="0" max="300000" default="0" />
+    <RULER orientation="horizontal" height="50" width="101%" value_suffix="false" param_info_id="ruler_param.info" color="#999999" value_format=".0" content="{value}" positions_count="$POSCOUNT_FOR_RULER$" font_escapement="90" text_h_align="right" v_offset="5" /> 
+  </CELL>
+
+  <!-- ACTIONS -->
+
+  <!-- window onload -->
+  <ACTION_TRIGGER event_id="window.loaded.value_changed" script="onLoad();" async="false" />
+
+  <!-- change ruler on samplerate change -->
+  <ACTION_TRIGGER event_id="$OP_SAMPLERATE$.value_changed" script="onLoad();" async="true" />
+
+</SKIN>
