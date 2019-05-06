@@ -1,0 +1,151 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<SKIN layout_type="column" h_margin="0" v_margin="0">
+
+<DEFINE>
+  <VAR base_type="VARIABLE" override="true" />
+  <LVAR base_type="LOCAL_VARIABLE" override="true" />
+  <INVISIBLE_KNOB base_type="IMAGE_PARAM_KNOB" pixel_range="128" image_scaling="1" image="$PLUGIN_DATA_PATH$/Skins/Controls/groups/full_center.png" images_count="1" positions_count="100" image_orientation="vertical" cursor="system::hand" ignore_mask_files="true" opacity="0" />
+</DEFINE>
+
+<VAR id="PI" formula="pi" />
+
+<TEMPLATE id="VECTOR_KNOB" param_id="_" size="150" line_len="0.56" line_width="1" fill="#000000">
+  <LVAR id="rx" formula="floor($size$/2)" />
+  <LVAR id="ry" formula="floor($size$/2)" />
+  <LVAR id="scaling" formula="floor($size$/40)" />
+  <LVAR id="line_len_px" formula="floor($size$/2)*$line_len$" />
+  <LVAR id="line_width_px" formula="floor($size$/12.5)*$line_width$+2" />
+  <CELL>
+    <LAYER_STACK>
+      <svg width="$size$" height="$size$">
+        <ellipse cx="$rx$" cy="$ry$" rx="$rx$" ry="$ry$" fill="$fill$" />
+      </svg>
+        <CANVAS opacity="1" id="canvas_$param_id$" width="100%" height="100%" render_script="
+          double w=this.width, h=this.height;
+          double astart = 225, aend = -45;
+          double pi=$PI$;
+          double x1 = w/2; double y1 = h/2;
+          double dx1 = 0, dy1=0, dx2 =0, dy2=0;
+          double nval = ($param_id$-$param_id$.min)/($param_id$.max-$param_id$.min); /* normalized value */
+          double angle = (aend-astart)*nval+225;
+          double adeg = angle;
+          double arad = adeg*pi/180;
+          dx1 = cos(arad)*(x1-$line_len_px$);
+          dy1 = -sin(arad)*(y1-$line_len_px$);
+          dx2 = cos(arad)*x1;
+          dy2 = -sin(arad)*y1;
+          
+          /* if ((adeg>0) and (adeg&lt;180)) dy=-dy; */
+          auto ctx=Kt::Graphics::GetCurrentContext();
+          ctx.path.Clear();
+          ctx.source.SetRGBA (1,1,1, 1);
+          ctx.settings.set_lineWidth($line_width_px$);
+          ctx.path.MoveTo(x1+dx1, y1+dy1);
+          ctx.path.LineTo(x1+dx2, y1+dy2);
+          ctx.StrokePath();
+
+          /* ctx.path.MoveTo(x1-40,y1+30);
+          ctx.WriteText(&quot;&quot;+angle+&quot;: &quot; +nval); */
+        " requires="canvas_$param_id$.width;canvas_$param_id$.height;$param_id$.max;$param_id$.min" />
+        <INVISIBLE_KNOB param_id="$param_id$" image_scaling="$scaling$" />
+    </LAYER_STACK>
+    <PARAM_TEXT_CONTROL param_id="$param_id$" />
+    <ACTION_TRIGGER event_id="$param_id$.value_changed" script="canvas_$param_id$.Invalidate()" requires="canvas_$param_id$.Invalidate" />
+  </CELL>
+</TEMPLATE>
+
+<PARAM id="param1" min="-100" max="100" default="0" exposed="true" />
+<PARAM id="param2" min="00" max="10" default="3" exposed="true"  />
+<PARAM id="param3" min="00" max="10" default="3" exposed="true"  />
+
+<ROW spacing="20">
+<VECTOR_KNOB size="100" param_id="param1" fill="#003300"/>
+<VECTOR_KNOB size="100" param_id="param2" fill="#000060" line_width="1.5" line_len="0.5" />
+<VECTOR_KNOB size="100" param_id="param3" fill="#800000" line_width="0.7" line_len="1" />
+</ROW>
+
+
+</SKIN>
+
+<!--
+
+// gradient
+<CANVAS opacity="1" id="canvas_2" width="$xmax$" height="$ymax$" render_script="
+  double h=this.height, w=this.width;
+  auto ctx=Kt::Graphics::GetCurrentContext();
+  auto gradient = ctx.get_patterns().NewLinearGradient(0,0,0,h);
+  gradient.AddColorStopRGB(0,   1,  0,    0);
+  gradient.AddColorStopRGB(0.25, 1,  0.7,  0);
+  gradient.AddColorStopRGB(0.5, 0,  0.8,    0);
+  gradient.SelectAsSource(); 
+  ctx.path.Clear();
+  ctx.path.Rectangle(0,0,w,h);
+  ctx.FillPath();
+
+" requires="canvas_2.width;canvas_2.height" />
+
+==========================
+
+c$r$,0 $s$,$r2$ $s$,$s$
+
+ctx.path.MoveTo(points[0][0], points[0][1]);
+ctx.settings.set_lineWidth(5);
+
+array&lt;array&lt;double>> p; 
+
+
+p = points;
+
+if (!smooth_lines) { 
+  /* drawing straight lines */
+  for (int n=1; n&lt;p.length; n++) {
+    ctx.path.LineTo(p[n][0], p[n][1]);
+  }
+} else {
+  /* drawing smooth lines (bezier curves) */
+  double smooth = smoothness; /* smoothness param */
+  double xpp, xp, xc, xn, ypp, yp, yc, yn;
+  double line1_len, line1_angle, line2_len, line2_angle;
+  double c1x, c1y, c2x, c2y; 
+
+  for (int n=1; n&lt;p.length; n++) {
+    xp = p[n-1][0]; xc = p[n][0]; 
+    yp = p[n-1][1]; yc = p[n][1]; 
+    /* if there is previous point */
+    if (n>1) {
+      xpp = p[n-2][0];
+      ypp = p[n-2][1];
+    } else {
+      xpp = xp;
+      ypp = yp;
+    }
+    /* if there is no next point */
+    if (n==(p.length-1)) {
+      xn = xc;
+      yn = yc;
+    } else {
+      xn = p[n+1][0];
+      yn = p[n+1][1];
+    }
+    
+    /* calculating bezier control points */
+    line1_len = sqrt(pow((xc-xpp), 2) + pow((yc-ypp), 2));
+    line1_angle = atan2((yc-ypp), (xc-xpp));
+    line2_len = sqrt(pow((xn-xp), 2) + pow((yn-yp), 2));
+    line2_angle = atan2((yn-yp), (xn-xp));
+    c1x = round(xp + cos(line1_angle)*line1_len*smooth);
+    c1y = round(yp + sin(line1_angle)*line1_len*smooth);
+    c2x = round(xc + cos(line2_angle + PI)*line2_len*smooth);
+    c2y = round(yc + sin(line2_angle + PI)*line2_len*smooth);
+    
+    /* adding path segment */
+    ctx.path.CurveTo(c1x,c1y,c2x,c2y,xc,yc);
+  }
+}
+
+ctx.source.SetRGB(red,0,0);
+ctx.StrokePath();
+
+red += 0.02;
+if (red > 1) red = 0;
+-->
