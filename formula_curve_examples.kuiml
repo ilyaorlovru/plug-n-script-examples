@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!--
+//////////////////////////////////////
+// KUIML Plot Graph by points
+// written by Ilya Orlov (LetiMix) 
+// https://www.youtube.com/channel/UCbS0EpAZytfizVvysUluEHQ
+// St. Petersburg, Russia, 2019
+// 
+// The idea is to use FORMULA_CURVE element
+// and create an appropriate formula using given points
+// to draw the plot. Three versions are available:
+// stepped graph, linear graph or smooth graph (with variable smoothness).
+//
+// Feel free to use in your projects.
+//
+// NOTE: If you want to draw anything more properly, use CANVAS element.
+//////////////////////////////////////
+-->
+<SKIN layout_type="column" h_margin="8" v_margin="2">
+  <!-- Definitions -->
+  <DEFINE>
+    <VAR base_type="VARIABLE" override="true" />
+  </DEFINE>
+
+  <!-- set maximum and minumum Y-values -->
+  <VAR id="Ymin" formula="-4" override="true" /> 
+  <VAR id="Ymax" formula="4" override="true" />
+
+  <!-- do not change these -->
+  <VAR id="Xcur" formula="-1" override="true" /> 
+  <VAR id="Xprev" formula="-1" override="true" /> 
+  <VAR id="Ncur" formula="-1" override="true" /> 
+  <VAR id="Nprev" value="undef" override="true" /> 
+  <PARAM id="y$Nprev$" default="0" min="$Ymin$" max="$Ymax$" exposed="true" />
+  <VAR id="CurveFormulaStepped" value="0" override="true" />
+  <VAR id="CurveFormulaLinear" value="0" override="true" />
+  <VAR id="CurveFormulaSmooth" value="0" override="true" />
+
+  <!-- template for easy adding new points (see example below) -->
+  <TEMPLATE id="ADD_POINT" y="0" x="0">
+    <!-- increase current N -->
+    <VAR id="Ncur" formula="$Ncur$+1" override="true" />
+    <!-- increase current X (+1) or set it to given x value -->
+    <VAR id="Xcur" formula="($Xcur$+1)*($x$==0)+$x$*($x$!=0)" override="true" />
+    <!-- create param for each point and link it to script array for later access-->
+    <PARAM id="y$Ncur$" default="$y$" min="$Ymin$" max="$Ymax$" exposed="true" />
+    <ACTION_TRIGGER event_id="window.loaded.value_changed" condition_formula="window.loaded==1" script="@y[$Ncur$]=y$Ncur$;" requires="y$Ncur$"/>
+    <!-- add current point to formulas -->
+    <VAR id="CurveFormulaStepped" value="$CurveFormulaStepped$ + (y$Ncur$-y$Nprev$)*(x>=$Xcur$)" override="true" />
+    <VAR id="CurveFormulaLinear" value="$CurveFormulaLinear$ + (y$Nprev$+((y$Ncur$-y$Nprev$)/($Xcur$-$Xprev$))*(x-$Xprev$))*(x>$Xprev$)*(x&lt;=$Xcur$)" override="true" />
+    <VAR id="CurveFormulaSmooth" value="$CurveFormulaSmooth$ + ((1+tanh(k*(x - $Xcur$)))/2)*(y$Ncur$-y$Nprev$) " override="true" />
+    <!-- increase vars -->
+    <VAR id="Xprev" formula="$Xcur$" override="true" />
+    <VAR id="Nprev" formula="$Ncur$" override="true" />
+    <!-- <TEXT value="n: $Ncur$, x: $Xcur$, y: $y$" /> -->
+    <!--  we can calculate Y min and max values automatically if we need -->
+    <!--
+    <VAR id="Ymax" formula="($y$>$Ymax$)*$y$ + ($y$&lt;=$Ymax$)*$Ymax$" override="true" /> 
+    <VAR id="Ymin" formula="($y$&lt;$Ymin$)*$y$ + ($y$>=$Ymin$)*$Ymin$" override="true" /> 
+    -->
+  </TEMPLATE>
+  <TEMPLATE id="ADD_POINTS" ys="#undefined#" x="0">
+    <REPEAT index_list="$ys$">
+      <ADD_POINT y="$index$" />
+    </REPEAT>
+  </TEMPLATE>
+
+
+
+  <!-- EDIT POINTS HERE -->
+
+
+  <!-- ADD POINTS -->
+  <ADD_POINT y="0" /> <!-- for x = 0 -->
+  <ADD_POINT y="1" /> <!-- for x = 1 -->
+  <ADD_POINT y="-1" /> <!-- for x = 2 -->
+  <ADD_POINT y="2.5" />
+  <!-- <ADD_POINT y="2.5" x="5" /> --> <!-- skip forward to greater x -->
+  <ADD_POINTS ys="-2; 3.5; -3; 1; 3" /> <!-- add bunch of points at once -->
+
+  <!-- END OF ADDING POINTS -->
+
+  <!-- every new point adds PARAM (with ids "y0","y1","y2"...) 
+      and links that PARAM element to indexes of array @y[]
+      so that we can access/change that params in KUIML script later:
+      y[0]=...; y[1]=...;
+      We can also add knobs to to change params y0,y1... manually  .
+      Or we can link outputParams (from .cxx) like this: -->
+  
+  <!-- UNCOMMENT THESE TO COMMUNCATE WITH .CXX -->
+  <!--
+  <PARAM_LINK id="link1" from="custom_out_param0" to="y0" enabled="true" />
+  <PARAM_LINK id="link2" from="custom_out_param1" to="y1" enabled="true" />
+  -->
+  
+
+
+  <!-- auto calculated values -->
+  <VAR id="YMaxPadded" formula="ceil($Ymax$)+0.1" />
+  <VAR id="YMinPadded" formula="floor($Ymin$)-1" />
+  <VAR id="GridYPositions" formula="$YMaxPadded$-$YMinPadded$+1" />
+  <VAR id="GridXPositions" formula="$Xcur$+2" />
+  <VAR id="Xmax" formula="$Xcur$+1" /> <!-- maximum X -->
+  <VAR id="Ntotal" formula="$Ncur$" /> <!-- maximum X -->
+
+  <!-- scripts -->
+  <SCRIPT requires="" script="
+  /* create array of params for accessing y-values */
+  array&lt;Kt::Param@> y($Ntotal$+1);
+
+  void onLoad(){
+    /* we can now manipulate added points (y-values) */
+    /* y[1]=-2; */ 
+    /* y[2]=0; */
+  }
+  "/>
+
+  <!-- window onload -->
+  <ACTION_TRIGGER event_id="window.loaded.value_changed" script="onLoad();" async="false" />
+
+  <!-- the stepped curve -->
+  <PNS_LCD_GROUP_BOX>
+  <THEME_GRAPH_BG_BOX image="$THEME_PATH$/group_boxes/graph_box_center.png"  margin="0" spacing="0" layout_type="layer_stack">
+    <LAYER_STACK width="300" height="140" >
+
+      <!-- formula curve element -->
+      <FORMULA_CURVE id="formula_curve_stepped" x_default="0" x_max="$Xmax$" x_min="0" y_default="0" y_max="$YMaxPadded$" y_min="$YMinPadded$" formula="$CurveFormulaStepped$" />
+
+      <GRID width="100%" height="100%" x_positions_count="$GridXPositions$" y_positions_count="$GridYPositions$" x_subdiv_count="0" y_subdiv_count="0" origin_color="#1b4358" subdiv_color="#072941" color="#0a3758" x_param_info_id="formula_curve_stepped.x_info"  y_param_info_id="formula_curve_stepped.y_info" />
+
+      <CURVE_GRAPH id="curve_graph_smooth" curve_id="formula_curve_stepped" width="100%" height="100%" anti_alias="true" color="#00DD00" line_width="2" />
+     
+      <RULER orientation="horizontal" width="100%" value_suffix="false" param_info_id="formula_curve_stepped.x_info" color="#AAAAAA" value_format=".0" content="{value}" positions_count="$GridXPositions$" font_escapement="0" text_h_align="right" v_offset="0" v_align="bottom" /> 
+
+      <RULER orientation="vertical" h_align="right" height="100%" width="40" value_suffix="false" param_info_id="formula_curve_stepped.y_info" color="#AAAAAA" value_format=".0" content="{value}" positions_count="$GridYPositions$" font_escapement="90" text_h_align="left" h_offset="8" v_offset="-15" /> 
+
+    </LAYER_STACK>
+  </THEME_GRAPH_BG_BOX>
+  </PNS_LCD_GROUP_BOX>
+
+  <!-- a way to modify parameters -->
+  <ROW spacing="10">
+    <!-- limit number of knobs to 8 -->
+    <VAR id="KNOBS_COUNT" formula="($Ncur$&lt;9)*($Ncur$+1) + ($Ncur$>=9)*8" />
+    <REPEAT count="$KNOBS_COUNT$">
+      <CUS_MINI_BLUE_KNOB param_id="y$index$" />
+    </REPEAT>
+  </ROW>
+
+  <!-- the linear curve -->
+  <PNS_LCD_GROUP_BOX>
+  <THEME_GRAPH_BG_BOX image="$THEME_PATH$/group_boxes/graph_box_center.png"  margin="0" spacing="0" layout_type="layer_stack">
+    <LAYER_STACK width="300" height="140" >
+      
+      <!-- for linear curve add last segment -->
+      <VAR id="CurveFormulaLinear" value="$CurveFormulaLinear$ + y$Ncur$*(x>$Xcur$)" override="true" />
+      <FORMULA_CURVE id="formula_curve_linear" x_default="0" x_max="$Xmax$" x_min="0" y_default="0" y_max="$YMaxPadded$" y_min="$YMinPadded$" formula="$CurveFormulaLinear$" />
+
+      <GRID width="100%" height="100%" x_positions_count="$GridXPositions$" y_positions_count="$GridYPositions$" x_subdiv_count="0" y_subdiv_count="0" origin_color="#1b4358" subdiv_color="#072941" color="#0a3758" x_param_info_id="formula_curve_linear.x_info"  y_param_info_id="formula_curve_linear.y_info" />
+
+      <CURVE_GRAPH id="curve_graph_smooth" curve_id="formula_curve_linear" width="100%" height="100%" anti_alias="true" color="#00DD00" line_width="2" />
+
+      <RULER orientation="horizontal" width="100%" value_suffix="false" param_info_id="formula_curve_linear.x_info" color="#AAAAAA" value_format=".0" content="{value}" positions_count="$GridXPositions$" font_escapement="0" text_h_align="right" v_offset="0" v_align="bottom" /> 
+
+      <RULER orientation="vertical" h_align="right" height="100%" width="40" value_suffix="false" param_info_id="formula_curve_linear.y_info" color="#AAAAAA" value_format=".0" content="{value}" positions_count="$GridYPositions$" font_escapement="90" text_h_align="left" h_offset="8" v_offset="-15" /> 
+
+    </LAYER_STACK>
+  </THEME_GRAPH_BG_BOX>
+  </PNS_LCD_GROUP_BOX>
+
+  <!-- the smooth curve -->
+  <PNS_LCD_GROUP_BOX>
+  <THEME_GRAPH_BG_BOX image="$THEME_PATH$/group_boxes/graph_box_center.png"  margin="0" spacing="0" layout_type="layer_stack">
+    <LAYER_STACK width="300" height="140" >
+      
+      <!-- formula curve element -->
+      <FORMULA_CURVE id="formula_curve_smooth" x_default="0" x_max="$Xmax$" x_min="0" y_default="0" y_max="$YMaxPadded$" y_min="$YMinPadded$" formula="$CurveFormulaSmooth$" />
+
+      <GRID width="100%" height="100%" x_positions_count="$GridXPositions$" y_positions_count="$GridYPositions$" x_subdiv_count="0" y_subdiv_count="0" origin_color="#1b4358" subdiv_color="#072941" color="#0a3758" x_param_info_id="formula_curve_smooth.x_info"  y_param_info_id="formula_curve_smooth.y_info" />
+
+      <CURVE_GRAPH id="curve_graph_smooth" curve_id="formula_curve_smooth" width="100%" height="100%" anti_alias="true" color="#00DD00" line_width="2" />
+
+      <RULER orientation="horizontal" width="100%" value_suffix="false" param_info_id="formula_curve_smooth.x_info" color="#AAAAAA" value_format=".0" content="{value}" positions_count="$GridXPositions$" font_escapement="0" text_h_align="right" v_offset="0" v_align="bottom" /> 
+
+      <RULER orientation="vertical" h_align="right" height="100%" width="40" value_suffix="false" param_info_id="formula_curve_smooth.y_info" color="#AAAAAA" value_format=".0" content="{value}" positions_count="$GridYPositions$" font_escapement="90" text_h_align="left" h_offset="8" v_offset="-15" /> 
+
+      <ROW spacing="8" h_align="left" v_align="bottom" v_offset="-15" h_offset="5">
+        <PARAM id="k" min="1" max="30" exposed="true" default="7" />
+        <CUS_MINI_BLUE_KNOB param_id="k" />
+        <PARAM_TEXT param_id="k" content="k={value}"/>
+      </ROW>
+    </LAYER_STACK>
+  </THEME_GRAPH_BG_BOX>
+  </PNS_LCD_GROUP_BOX>
+
+</SKIN>

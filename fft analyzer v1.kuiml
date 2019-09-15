@@ -15,10 +15,9 @@
   <!-- other vars -->
   <VAR id="POSCOUNT_FOR_RULER" formula="($NUM_OF_BARS$+1)"/>
 
-  <EXPOSED_OBJECTS object_ids="*" />
 
   <!-- scripts -->
-  <SCRIPT requires="" script="
+  <SCRIPT requires="ruler_param.*;$OP_SAMPLERATE$" script="
   void onLoad(){
     ruler_param.max = $OP_SAMPLERATE$ / 2;
   }

@@ -4,7 +4,7 @@
 <DEFINE>
   <VAR base_type="VARIABLE" override="true" />
   <LVAR base_type="LOCAL_VARIABLE" override="true" />
-  <INVISIBLE_KNOB base_type="IMAGE_PARAM_KNOB" pixel_range="128" image_scaling="1" image="$PLUGIN_DATA_PATH$/Skins/Controls/groups/full_center.png" images_count="1" positions_count="100" image_orientation="vertical" cursor="system::hand" ignore_mask_files="true" opacity="0" />
+  <INVISIBLE_KNOB base_type="IMAGE_PARAM_KNOB" pixel_range="128" image_scaling="1" image="$PLUGIN_DATA_PATH$/Skins/Controls/groups/full_center.png" images_count="1" positions_count="100" image_orientation="vertical" cursor="system::hand" ignore_mask_files="true" opacity="0" /> <!-- using any image of known size (to do proper image scaling) to make IMAGE_PARAM_KNOB work as a correct "mouse behaviour" element -->
 </DEFINE>
 
 <VAR id="PI" formula="pi" />
@@ -60,7 +60,7 @@
 
 <ROW spacing="20">
 <VECTOR_KNOB size="100" param_id="param1" fill="#003300"/>
-<VECTOR_KNOB size="100" param_id="param2" fill="#000060" line_width="1.5" line_len="0.5" />
+<VECTOR_KNOB size="100" param_id="param2" fill="#000060" line_width="1.2" line_len="0.5" />
 <VECTOR_KNOB size="100" param_id="param3" fill="#800000" line_width="0.7" line_len="1" />
 </ROW>
 
