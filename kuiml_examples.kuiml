@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<SKIN layout_type="column" h_margin="8" v_margin="2">
+
+	<!-- ONE CONTROL ENABLES/DISABLES ANOTHER CONTROL -->
+
+	<CELL v_margin="10">
+		<TEXT value="Second knob is only active for Mode C" />
+	</CELL>
+
+	<!-- create two params (we can use custom_params from .cxx as well) -->
+	<PARAM id="myparam1" type="enumeration" enum_values="Mode A;Mode B;Mode C" default="0" />
+	<PARAM id="myparam2" min="0" max="100" default="50" />
+
+	<ROW spacing="20">
+		<!-- knob A -->
+		<CELL>
+			<CUS_DARK_BLUE_KNOB param_id="myparam1" />
+			<PARAM_TEXT param_id="myparam1" />
+		</CELL>
+
+		<!-- knob B / we use WIDGET instead of CELL because it supports "opacity" attribute -->
+		<WIDGET id="cell_knob_for_mode_c">
+			<LAYER_STACK>
+				<CUS_DARK_BLUE_KNOB id="knob_for_param2" param_id="myparam2" />
+				<!-- we show second knob with disabled mouse behaviour when knob is "disabled" -->
+				<CUS_DARK_BLUE_KNOB id="knob_for_param2_disabled" param_id="myparam2" mouse_sensitive="false" visible="false" />
+			</LAYER_STACK>
+			<PARAM_TEXT param_id="myparam2" />
+		</WIDGET>
+	</ROW>
+
+	<!-- now we do param linking -->
+	<!-- change opacity of the knob B depending on param1, minimum opacity 0.2 + (0 or 1) -->
+	<PARAM_LINK from="myparam1" to="cell_knob_for_mode_c.opacity" formula="0.2 + (x==2)" />
+	<!-- toggle visibility of normal (mouse active) and disabled (mouse inactive) knobs -->
+	<PARAM_LINK from="myparam1" to="knob_for_param2.visible" formula="(x==2)" />
+	<PARAM_LINK from="myparam1" to="knob_for_param2_disabled.visible" formula="(x==2)" reverse="true" />
+
+</SKIN>
