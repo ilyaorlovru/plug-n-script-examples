@@ -19,7 +19,7 @@
 		</CELL>
 
 		<!-- knob B / we use WIDGET instead of CELL because it supports "opacity" attribute -->
-		<WIDGET id="cell_knob_for_mode_c">
+		<WIDGET id="widget_knob_for_mode_c">
 			<LAYER_STACK>
 				<CUS_DARK_BLUE_KNOB id="knob_for_param2" param_id="myparam2" />
 				<!-- we show second knob with disabled mouse behaviour when knob is "disabled" -->
@@ -30,8 +30,8 @@
 	</ROW>
 
 	<!-- now we do param linking -->
-	<!-- change opacity of the knob B depending on param1, minimum opacity 0.2 + (0 or 1) -->
-	<PARAM_LINK from="myparam1" to="cell_knob_for_mode_c.opacity" formula="0.2 + (x==2)" />
+	<!-- change opacity of the WIDGET with knob B depending on param1, minimum opacity 0.2 + (0 or 1) -->
+	<PARAM_LINK from="myparam1" to="widget_knob_for_mode_c.opacity" formula="0.2 + (x==2)" />
 	<!-- toggle visibility of normal (mouse active) and disabled (mouse inactive) knobs -->
 	<PARAM_LINK from="myparam1" to="knob_for_param2.visible" formula="(x==2)" />
 	<PARAM_LINK from="myparam1" to="knob_for_param2_disabled.visible" formula="(x==2)" reverse="true" />
