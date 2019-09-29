@@ -7,7 +7,12 @@
 		<TEXT value="Second knob is only active for Mode C" />
 	</CELL>
 
-	<!-- create two params (we can use custom_params from .cxx as well) -->
+	<!--
+	create two demo params.
+	we can use custom_params from .cxx as well: just delete following demo params,
+	don't create custom_params1, custom_params2, as they are already created in the main skin
+	-->
+
 	<PARAM id="myparam1" type="enumeration" enum_values="Mode A;Mode B;Mode C" default="0" />
 	<PARAM id="myparam2" min="0" max="100" default="50" />
 
