@@ -1,5 +1,5 @@
 //////////////////////////////////////
-// Simple FIR filter implementation
+// Simple FIR filter/convolution implementation
 // written by Ilya Orlov (LetiMix) 
 // https://www.youtube.com/channel/UCbS0EpAZytfizVvysUluEHQ
 // St. Petersburg, Russia, 2019
