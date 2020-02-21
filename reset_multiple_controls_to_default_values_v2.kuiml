@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<SKIN layout_type="column" h_margin="8" v_margin="2">
+
+<!-- ================================================================ -->
+<!-- HOW TO RESET SEVERAL CONTROLS TO DEFAULT VALUES USING ONE BUTTON -->
+<!-- ================================================================ -->
+	
+	<TEXT value="Reset several controls to default values" />
+	<TEXT value="Using PARAM_LINK (no scripting)" />
+	<!-- demo controls -->
+	<ROW v_margin="10" spacing="5">
+		<COLUMN>
+			<PARAM_TEXT param_id="custom_param0" content="{name}" />
+			<CUS_DARK_BLUE_KNOB param_id="custom_param0" />
+			<PARAM_TEXT param_id="custom_param0" />
+		</COLUMN>
+		<COLUMN>
+			<PARAM_TEXT param_id="custom_param1" content="{name}" />
+			<CUS_DARK_BLUE_KNOB param_id="custom_param1" />
+			<PARAM_TEXT param_id="custom_param1" />
+		</COLUMN>
+		<COLUMN>
+			<PARAM_TEXT param_id="custom_param2" content="{name}" />
+			<CUS_DARK_BLUE_KNOB param_id="custom_param2" />
+			<PARAM_TEXT param_id="custom_param2" />
+		</COLUMN>
+	</ROW>
+	
+	<!-- make links from default value to param value, disabled by default -->
+	<PARAM_LINK id="linkdef0" from="custom_param0.default" to="custom_param0" enabled="false" />
+	<PARAM_LINK id="linkdef1" from="custom_param1.default" to="custom_param1" enabled="false" />
+	<PARAM_LINK id="linkdef2" from="custom_param2.default" to="custom_param2" enabled="false" />
+	<!-- link all links to enable/disable at once -->
+	<PARAM_MULTI_LINK from="linkdef0.enabled" to="linkdef1.enabled;linkdef2.enabled" />
+
+	<!-- widget "button"-like enabling first link (all other links follow) -->
+	<WIDGET background_color="#007700" text_color="#FFFFFF" v_margin="5" h_margin="10">
+		<TEXT id="reset_tx" value="Reset to default!">
+			<INVISIBLE_PARAM_TOGGLE_SWITCH id="rst_inv_button" param_id="linkdef0.enabled" cursor="system::hand" width="100%" height="100%" />
+		</TEXT>
+	</WIDGET>
+	
+	<!-- a small "animation trick" to slightly move text when button is pressed -->
+	<PARAM_MULTI_LINK from="rst_inv_button.pushed" to="reset_tx.h_offset;reset_tx.v_offset" />
+
+<!-- ================================================================ -->
+<!-- END OF: HOW TO RESET SEVERAL CONTROLS TO DEFAULT VALUES USING ONE BUTTON -->
+<!-- ================================================================ -->
+
+
+</SKIN>

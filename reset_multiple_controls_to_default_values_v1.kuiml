@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<SKIN layout_type="column" h_margin="8" v_margin="2">
+
+<!-- ================================================================ -->
+<!-- HOW TO RESET SEVERAL CONTROLS TO DEFAULT VALUES USING ONE BUTTON -->
+<!-- ================================================================ -->
+	
+	<TEXT value="Reset several controls to default values" />
+	<TEXT value="Using ACTION (script)" />
+	<!-- demo controls -->
+	<ROW v_margin="10" spacing="5">
+		<COLUMN>
+			<PARAM_TEXT param_id="custom_param0" content="{name}" />
+			<CUS_DARK_BLUE_KNOB param_id="custom_param0" />
+			<PARAM_TEXT param_id="custom_param0" />
+		</COLUMN>
+		<COLUMN>
+			<PARAM_TEXT param_id="custom_param1" content="{name}" />
+			<CUS_DARK_BLUE_KNOB param_id="custom_param1" />
+			<PARAM_TEXT param_id="custom_param1" />
+		</COLUMN>
+		<COLUMN>
+			<PARAM_TEXT param_id="custom_param2" content="{name}" />
+			<CUS_DARK_BLUE_KNOB param_id="custom_param2" />
+			<PARAM_TEXT param_id="custom_param2" />
+		</COLUMN>
+	</ROW>
+	
+	<!-- action to reset input params to default values -->
+	<ACTION id="reset_all" type="Script" 
+		script="custom_param0 = $script_input_param0_default$;custom_param1 = $script_input_param1_default$;	custom_param2 = $script_input_param2_default$;" 
+		requires="custom_param0;$script_input_param0_default$;custom_param1;$script_input_param1_default$;custom_param2;$script_input_param2_default$" />
+	
+	<!-- widget "button"-like -->
+	<WIDGET background_color="#007700" text_color="#FFFFFF" v_margin="5" h_margin="10">
+		<TEXT id="reset_text" value="Reset to default!">
+			<INVISIBLE_ACTION_BUTTON id="reset_inv_button" action_id="reset_all" cursor="system::hand" width="100%" height="100%" />
+		</TEXT>
+	</WIDGET>
+	
+	<!-- a small "animation trick" to slightly move text when button is pressed -->
+	<PARAM_MULTI_LINK from="reset_inv_button.pushed" to="reset_text.h_offset;reset_text.v_offset" />
+
+<!-- ================================================================ -->
+<!-- END OF: HOW TO RESET SEVERAL CONTROLS TO DEFAULT VALUES USING ONE BUTTON -->
+<!-- ================================================================ -->
+
+
+</SKIN>
